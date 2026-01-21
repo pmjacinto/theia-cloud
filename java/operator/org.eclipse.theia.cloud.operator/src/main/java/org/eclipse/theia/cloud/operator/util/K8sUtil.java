@@ -28,6 +28,8 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import io.fabric8.kubernetes.api.model.gatewayapi.v1.HTTPRoute;
+import io.fabric8.kubernetes.api.model.gatewayapi.v1.HTTPRouteList;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.theia.cloud.common.k8s.resource.ResourceEdit;
@@ -51,6 +53,7 @@ public final class K8sUtil {
     private static final String CONFIG_MAP = "ConfigMap";
     private static final String SERVICE = "Service";
     private static final String INGRESS = "Ingress";
+    private static final String HTTPROUTE = "HTTPRoute";
 
     private K8sUtil() {
     }
@@ -87,6 +90,12 @@ public final class K8sUtil {
                 client.configMaps().inNamespace(namespace).list().getItems());
     }
 
+    public static List<HTTPRoute> getExistingHttpRoutes(NamespacedKubernetesClient client, String namespace,
+            String ownerName, String ownerUid) {
+        return getExistingTypes(client, namespace, ownerName, ownerUid,
+                client.resources(HTTPRoute.class).inNamespace(namespace).list().getItems());
+    }
+
     private static <T extends HasMetadata> List<T> getExistingTypes(NamespacedKubernetesClient client, String namespace,
             String ownerName, String ownerUid, List<T> items) {
         return getExistingTypesStream(client, namespace, ownerName, ownerUid, items)//
@@ -116,6 +125,15 @@ public final class K8sUtil {
         return loadAndCreateTypeWithOwnerReference(client, namespace, correlationId, yaml, ownerAPIVersion, ownerKind,
                 ownerName, ownerUid, ownerReferenceIndex, INGRESS,
                 client.network().v1().ingresses().inNamespace(namespace), labelsToAdd, item -> {
+                });
+    }
+
+    public static Optional<HTTPRoute> loadAndCreateHTTPRouteWithOwnerReference(NamespacedKubernetesClient client,
+            String namespace, String correlationId, String yaml, String ownerAPIVersion, String ownerKind,
+            String ownerName, String ownerUid, int ownerReferenceIndex, Map<String, String> labelsToAdd) {
+        return loadAndCreateTypeWithOwnerReference(client, namespace, correlationId, yaml, ownerAPIVersion, ownerKind,
+                ownerName, ownerUid, ownerReferenceIndex, HTTPROUTE,
+                client.resources(HTTPRoute.class, HTTPRouteList.class), labelsToAdd, item -> {
                 });
     }
 

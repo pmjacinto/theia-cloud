@@ -89,6 +89,8 @@ public class AppDefinitionSpec {
     @JsonProperty("ingressHostnamePrefixes")
     private List<String> ingressHostnamePrefixes;
 
+    @JsonProperty("gatewayName")
+    private String gatewayName;
     /**
      * Default constructor.
      */
@@ -117,6 +119,8 @@ public class AppDefinitionSpec {
 
         this.options = fromHub.getOptions().orElse(null);
         this.ingressHostnamePrefixes = fromHub.getIngressHostnamePrefixes().orElse(null);
+
+        this.gatewayName = fromHub.getGatewayName().orElse(null);
 
         int monitorPort = fromHub.getMonitorPort().orElse(0);
         if (monitorPort > 0) {
@@ -220,6 +224,10 @@ public class AppDefinitionSpec {
         return ingressHostnamePrefixes;
     }
 
+    public String getGatewayName() {
+        return gatewayName;
+    }
+
     @Override
     public String toString() {
         final String redactedPullSecret = "***";
@@ -228,7 +236,7 @@ public class AppDefinitionSpec {
                 + ingressname + ", minInstances=" + minInstances + ", maxInstances=" + maxInstances + ", timeout="
                 + timeout + ", requestsMemory=" + requestsMemory + ", requestsCpu=" + requestsCpu + ", limitsMemory="
                 + limitsMemory + ", limitsCpu=" + limitsCpu + ", downlinkLimit=" + downlinkLimit + ", uplinkLimit="
-                + uplinkLimit + ", mountPath=" + mountPath + "]";
+                + uplinkLimit + ", mountPath=" + mountPath +", gatewayName=" + gatewayName + "]";
     }
 
     public static class Monitor {

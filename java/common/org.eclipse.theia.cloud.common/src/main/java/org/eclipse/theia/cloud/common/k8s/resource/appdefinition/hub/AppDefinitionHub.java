@@ -44,6 +44,7 @@ public class AppDefinitionHub {
     final OptionalInt uplinkLimit;// kilobits per second
     final Optional<String> mountPath;
     final Optional<List<String>> ingressHostnamePrefixes;
+    final Optional<String> gatewayName;
 
     final OptionalInt timeoutLimit;
     @Deprecated
@@ -78,6 +79,7 @@ public class AppDefinitionHub {
         this.mountPath = Optional.ofNullable(toHub.getSpec().getMountPath());
         this.options = Optional.ofNullable(toHub.getSpec().getOptions());
         this.ingressHostnamePrefixes = Optional.ofNullable(toHub.getSpec().getIngressHostnamePrefixes());
+        this.gatewayName = Optional.ofNullable(toHub.getSpec().getGatewayName());
 
         this.timeoutLimit = OptionalInt.of(toHub.getSpec().getTimeout());
 
@@ -130,6 +132,7 @@ public class AppDefinitionHub {
         this.mountPath = Optional.ofNullable(toHub.getSpec().getMountPath());
         this.options = Optional.empty();
         this.ingressHostnamePrefixes = Optional.empty();
+        this.gatewayName = Optional.empty();
 
         this.timeoutLimit = OptionalInt.of(toHub.getSpec().getTimeout());
 
@@ -182,6 +185,7 @@ public class AppDefinitionHub {
         this.mountPath = Optional.ofNullable(toHub.getSpec().getMountPath());
         this.options = Optional.empty();
         this.ingressHostnamePrefixes = Optional.empty();
+        this.gatewayName = Optional.empty();
 
         if (toHub.getSpec().getTimeout() != null) {
             this.timeoutLimit = OptionalInt.of(toHub.getSpec().getTimeout().getLimit());
@@ -320,6 +324,10 @@ public class AppDefinitionHub {
 
     public Optional<List<String>> getIngressHostnamePrefixes() {
         return ingressHostnamePrefixes;
+    }
+
+    public Optional<String> getGatewayName() {
+        return gatewayName;
     }
 
 }

@@ -77,6 +77,7 @@ public final class AddedHandlerUtil {
     public static final String TEMPLATE_CONFIGMAP_YAML = "/templateConfigmap.yaml";
     public static final String TEMPLATE_DEPLOYMENT_YAML = "/templateDeployment.yaml";
     public static final String TEMPLATE_DEPLOYMENT_WITHOUT_AOUTH2_PROXY_YAML = "/templateDeploymentWithoutOAuthProxy.yaml";
+    public static final String TEMPLATE_HTTP_ROUTE_YAML = "/templateHTTPRoute.yaml";
 
     public static final String OAUTH2_PROXY_CFG = "oauth2-proxy.cfg";
 

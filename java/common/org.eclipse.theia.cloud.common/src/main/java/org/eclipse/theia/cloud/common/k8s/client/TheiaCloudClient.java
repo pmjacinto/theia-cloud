@@ -28,6 +28,8 @@ import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceList;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressList;
+import io.fabric8.kubernetes.api.model.gatewayapi.v1.HTTPRoute;
+import io.fabric8.kubernetes.api.model.gatewayapi.v1.HTTPRouteList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import io.fabric8.kubernetes.client.NamespacedKubernetesClient;
@@ -59,6 +61,10 @@ public interface TheiaCloudClient extends NamespacedKubernetesClient {
 
     default ResourceClient<Ingress, IngressList> ingresses() {
         return client(kubernetes().network().v1().ingresses(), Ingress.class);
+    }
+
+    default ResourceClient<HTTPRoute, HTTPRouteList> httpRoutes() {
+        return client(kubernetes().resources(HTTPRoute.class, HTTPRouteList.class), HTTPRoute.class);
     }
 
     @SuppressWarnings("unchecked")

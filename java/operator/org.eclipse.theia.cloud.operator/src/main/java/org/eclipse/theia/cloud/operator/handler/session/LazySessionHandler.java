@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Optional;
 
+import io.fabric8.kubernetes.api.model.gatewayapi.v1.HTTPRoute;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.theia.cloud.common.k8s.client.TheiaCloudClient;
@@ -48,13 +49,7 @@ import org.eclipse.theia.cloud.operator.bandwidth.BandwidthLimiter;
 import org.eclipse.theia.cloud.operator.handler.AddedHandlerUtil;
 import org.eclipse.theia.cloud.operator.ingress.IngressPathProvider;
 import org.eclipse.theia.cloud.operator.replacements.DeploymentTemplateReplacements;
-import org.eclipse.theia.cloud.operator.util.JavaResourceUtil;
-import org.eclipse.theia.cloud.operator.util.K8sUtil;
-import org.eclipse.theia.cloud.operator.util.TheiaCloudConfigMapUtil;
-import org.eclipse.theia.cloud.operator.util.TheiaCloudIngressUtil;
-import org.eclipse.theia.cloud.operator.util.TheiaCloudK8sUtil;
-import org.eclipse.theia.cloud.operator.util.TheiaCloudPersistentVolumeUtil;
-import org.eclipse.theia.cloud.operator.util.TheiaCloudServiceUtil;
+import org.eclipse.theia.cloud.operator.util.*;
 
 import com.google.inject.Inject;
 
@@ -178,13 +173,16 @@ public class LazySessionHandler implements SessionHandler {
             return false;
         }
 
-        Optional<Ingress> ingress = getIngress(appDefinition, correlationId);
-        if (ingress.isEmpty()) {
-            client.sessions().updateStatus(correlationId, session, s -> {
-                s.setOperatorStatus(OperatorStatus.ERROR);
-                s.setOperatorMessage("Ingress not available.");
-            });
-            return false;
+        Optional<Ingress> ingress = Optional.empty();
+        if (appDefinitionSpec.getGatewayName() == null) {
+            ingress = getIngress(appDefinition, correlationId);
+            if (ingress.isEmpty()) {
+                client.sessions().updateStatus(correlationId, session, s -> {
+                    s.setOperatorStatus(OperatorStatus.ERROR);
+                    s.setOperatorMessage("Ingress not available.");
+                });
+                return false;
+            }
         }
 
         syncSessionDataToWorkspace(session, correlationId);
@@ -268,18 +266,47 @@ public class LazySessionHandler implements SessionHandler {
         createAndApplyDeployment(correlationId, sessionResourceName, sessionResourceUID, session, appDefinition,
                 storageName, arguments.isUseKeycloak(), labelsToAdd);
 
-        /* adjust the ingress */
+        /* adjust the ingress or create HTTPRoute */
         String host;
-        try {
-            host = updateIngress(ingress, serviceToUse, session, appDefinition, correlationId);
-        } catch (KubernetesClientException e) {
-            LOGGER.error(formatLogMessage(correlationId,
-                    "Error while editing ingress " + ingress.get().getMetadata().getName()), e);
-            client.sessions().updateStatus(correlationId, session, s -> {
-                s.setOperatorStatus(OperatorStatus.ERROR);
-                s.setOperatorMessage("Failed to edit ingress");
-            });
-            return false;
+        if (appDefinitionSpec.getGatewayName() == null) {
+            try {
+                host = updateIngress(ingress, serviceToUse, session, appDefinition, correlationId);
+            } catch (KubernetesClientException e) {
+                LOGGER.error(formatLogMessage(correlationId,
+                        "Error while editing ingress " + ingress.get().getMetadata().getName()), e);
+                client.sessions().updateStatus(correlationId, session, s -> {
+                    s.setOperatorStatus(OperatorStatus.ERROR);
+                    s.setOperatorMessage("Failed to edit ingress");
+                });
+                return false;
+            }
+        } else {
+            List<HTTPRoute> existingRoutes = K8sUtil.getExistingHttpRoutes(client.kubernetes(), client.namespace(),
+                    sessionResourceName, sessionResourceUID);
+            if (!existingRoutes.isEmpty()) {
+                LOGGER.warn(formatLogMessage(correlationId,
+                        "Existing HTTPRoutes for " + sessionSpec + ". Session already running?"));
+                client.sessions().updateStatus(correlationId, session, s -> {
+                    s.setOperatorStatus(OperatorStatus.HANDLED);
+                    s.setOperatorMessage("HTTPRoute already exists.");
+                    s.setLastActivity(Instant.now().toEpochMilli());
+                });
+                return true;
+            }
+
+            Optional<HTTPRoute> httpRoute = createAndApplyHTTPRoute(serviceToUse.orElseThrow(), sessionResourceName,
+                    sessionResourceUID, session, appDefinition, correlationId, labelsToAdd);
+            if (httpRoute.isEmpty()) {
+                LOGGER.error(
+                        formatLogMessage(correlationId, "Unable to create HTTP route for session " + sessionSpec));
+                client.sessions().updateStatus(correlationId, session, s -> {
+                    s.setOperatorStatus(OperatorStatus.ERROR);
+                    s.setOperatorMessage("Failed to create HTTP Route.");
+                });
+                return false;
+            }
+
+            host = arguments.getInstancesHost() + ingressPathProvider.getPath(appDefinition, session) + "/";
         }
 
         /* Update session resource */
@@ -528,10 +555,8 @@ public class LazySessionHandler implements SessionHandler {
         volumeMount.setMountPath(TheiaCloudPersistentVolumeUtil.getMountPath(appDefinition));
     }
 
-    protected synchronized String updateIngress(Optional<Ingress> ingress, Optional<Service> serviceToUse,
-            Session session, AppDefinition appDefinition, String correlationId) {
+    private List<String> getIngressHosts(AppDefinition appDefinition, String instancesHost) {
         List<String> hostsToAdd = new ArrayList<>();
-        final String instancesHost = arguments.getInstancesHost();
         hostsToAdd.add(instancesHost);
         List<String> ingressHostnamePrefixes = appDefinition.getSpec().getIngressHostnamePrefixes() != null
                 ? appDefinition.getSpec().getIngressHostnamePrefixes()
@@ -539,6 +564,14 @@ public class LazySessionHandler implements SessionHandler {
         for (String prefix : ingressHostnamePrefixes) {
             hostsToAdd.add(prefix + instancesHost);
         }
+        return hostsToAdd;
+    }
+
+    protected synchronized String updateIngress(Optional<Ingress> ingress, Optional<Service> serviceToUse,
+            Session session, AppDefinition appDefinition, String correlationId) {
+        final String instancesHost = arguments.getInstancesHost();
+        List<String> hostsToAdd = getIngressHosts(appDefinition, instancesHost);
+
         String path = ingressPathProvider.getPath(appDefinition, session);
         client.ingresses().edit(correlationId, ingress.get().getMetadata().getName(), ingressToUpdate -> {
             for (String host : hostsToAdd) {
@@ -569,6 +602,24 @@ public class LazySessionHandler implements SessionHandler {
 
         });
         return instancesHost + path + "/";
+    }
+
+    protected Optional<HTTPRoute> createAndApplyHTTPRoute(Service serviceToUse, String sessionResourceName,
+            String sessionResourceUID, Session session, AppDefinition appDefinition, String correlationId, Map<String, String> labelsToAdd) {
+        final String instancesHost = arguments.getInstancesHost();
+        List<String> hostsToAdd = getIngressHosts(appDefinition, instancesHost);
+
+        Map<String, String> replacements = TheiaCloudHTTPRouteUtil.getHTTPRouteReplacements(appDefinition, session, serviceToUse, hostsToAdd);
+        String httpRouteYaml;
+        try {
+            httpRouteYaml = JavaResourceUtil.readResourceAndReplacePlaceholders(AddedHandlerUtil.TEMPLATE_HTTP_ROUTE_YAML, replacements,
+                    correlationId);
+        } catch (IOException | URISyntaxException e) {
+            LOGGER.error(formatLogMessage(correlationId, "Error while adjusting template for session " + session), e);
+            return Optional.empty();
+        }
+        return K8sUtil.loadAndCreateHTTPRouteWithOwnerReference(client.kubernetes(), client.namespace(), correlationId,
+                httpRouteYaml, Session.API, Session.KIND, sessionResourceName, sessionResourceUID, 0, labelsToAdd);
     }
 
     @Override
