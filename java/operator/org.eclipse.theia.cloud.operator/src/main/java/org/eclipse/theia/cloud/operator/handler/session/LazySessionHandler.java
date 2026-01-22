@@ -174,7 +174,7 @@ public class LazySessionHandler implements SessionHandler {
         }
 
         Optional<Ingress> ingress = Optional.empty();
-        if (appDefinitionSpec.getGatewayName() == null) {
+        if (appDefinitionSpec.getGatewayName() == null || appDefinitionSpec.getGatewayName().isEmpty()) {
             ingress = getIngress(appDefinition, correlationId);
             if (ingress.isEmpty()) {
                 client.sessions().updateStatus(correlationId, session, s -> {
@@ -268,7 +268,7 @@ public class LazySessionHandler implements SessionHandler {
 
         /* adjust the ingress or create HTTPRoute */
         String host;
-        if (appDefinitionSpec.getGatewayName() == null) {
+        if (appDefinitionSpec.getGatewayName() == null || appDefinitionSpec.getGatewayName().isEmpty()) {
             try {
                 host = updateIngress(ingress, serviceToUse, session, appDefinition, correlationId);
             } catch (KubernetesClientException e) {
@@ -652,6 +652,12 @@ public class LazySessionHandler implements SessionHandler {
         }
 
         AppDefinition appDefinition = optionalAppDefinition.get();
+
+        if (appDefinition.getSpec().getGatewayName() != null && !appDefinition.getSpec().getGatewayName().isEmpty()) {
+            LOGGER.info(formatLogMessage(correlationId,
+                    "Gateway mode, no ingress rules for session " + sessionSpec.getName()));
+            return true;
+        }
 
         /* find ingress */
         String appDefinitionResourceName = appDefinition.getMetadata().getName();

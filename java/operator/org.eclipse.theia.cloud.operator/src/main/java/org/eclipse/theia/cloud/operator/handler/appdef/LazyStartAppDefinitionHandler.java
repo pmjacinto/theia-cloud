@@ -96,7 +96,7 @@ public class LazyStartAppDefinitionHandler implements AppDefinitionHandler {
         String appDefinitionResourceName = appDefinition.getMetadata().getName();
 
         /* Create ingress if not existing */
-        if (spec.getGatewayName() != null) {
+        if (spec.getGatewayName() != null && !spec.getGatewayName().isEmpty()) {
             LOGGER.trace(formatLogMessage(correlationId, "Gateway API mode, nothing to do"));
         } else if (!TheiaCloudIngressUtil.checkForExistingIngressAndAddOwnerReferencesIfMissing(client.kubernetes(),
                 client.namespace(), appDefinition, correlationId)) {

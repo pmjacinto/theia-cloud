@@ -52,7 +52,7 @@ public final class TheiaCloudHTTPRouteUtil {
         replacements.put(PLACEHOLDER_SERVICE_NAME, service.getMetadata().getName());
         replacements.put(PLACEHOLDER_SERVICE_PORT, String.valueOf(appDefinition.getSpec().getPort()));
 
-        String yamlHosts = "\n" + hostsToAdd.stream().map(host -> "    - " + host + "\n").collect(Collectors.joining());
+        String yamlHosts = "\n" + hostsToAdd.stream().map(host -> "    - '" + host + "'\n").collect(Collectors.joining());
         replacements.put(PLACEHOLDER_HOSTNAMES, yamlHosts);
 
         return replacements;
