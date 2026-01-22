@@ -609,7 +609,7 @@ public class LazySessionHandler implements SessionHandler {
         final String instancesHost = arguments.getInstancesHost();
         List<String> hostsToAdd = getIngressHosts(appDefinition, instancesHost);
 
-        Map<String, String> replacements = TheiaCloudHTTPRouteUtil.getHTTPRouteReplacements(appDefinition, session, serviceToUse, hostsToAdd);
+        Map<String, String> replacements = TheiaCloudHTTPRouteUtil.getHTTPRouteReplacements(appDefinition, session, serviceToUse, client.namespace(), hostsToAdd);
         String httpRouteYaml;
         try {
             httpRouteYaml = JavaResourceUtil.readResourceAndReplacePlaceholders(AddedHandlerUtil.TEMPLATE_HTTP_ROUTE_YAML, replacements,
