@@ -25,4 +25,7 @@ public interface IngressPathProvider {
 
     String getPath(AppDefinition appDefinition, Session session);
 
+    default String getBasePath() {
+        return "/";
+    }
 }

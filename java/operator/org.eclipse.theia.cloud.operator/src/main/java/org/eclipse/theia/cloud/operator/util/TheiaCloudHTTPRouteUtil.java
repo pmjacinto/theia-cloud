@@ -37,6 +37,8 @@ public final class TheiaCloudHTTPRouteUtil {
     public static final String PLACEHOLDER_HOSTNAMES = "placeholder-hostnames";
     public static final String PLACEHOLDER_SERVICE_NAME = "placeholder-service-name";
     public static final String PLACEHOLDER_SERVICE_PORT= "placeholder-service-port";
+    public static final String PLACEHOLDER_PATH= "placeholder-path";
+    public static final String PLACEHOLDER_BASE_PATH= "placeholder-base-path";
 
     private TheiaCloudHTTPRouteUtil() {
     }
@@ -45,11 +47,13 @@ public final class TheiaCloudHTTPRouteUtil {
         return NamingUtil.createName(session);
     }
 
-    public static Map<String, String> getHTTPRouteReplacements(AppDefinition appDefinition, Session session, Service service, String namespace, List<String> hostsToAdd) {
+    public static Map<String, String> getHTTPRouteReplacements(AppDefinition appDefinition, Session session, Service service, String namespace, List<String> hostsToAdd, String path, String basePath) {
         Map<String, String> replacements = new LinkedHashMap<>();
         replacements.put(PLACEHOLDER_ROUTE_NAME, getHTTPRouteName(session));
         replacements.put(TheiaCloudHandlerUtil.PLACEHOLDER_NAMESPACE, namespace);
         replacements.put(PLACEHOLDER_GATEWAY_NAME, appDefinition.getSpec().getGatewayName());
+        replacements.put(PLACEHOLDER_PATH, path);
+        replacements.put(PLACEHOLDER_BASE_PATH, basePath);
         replacements.put(PLACEHOLDER_SERVICE_NAME, service.getMetadata().getName());
         replacements.put(PLACEHOLDER_SERVICE_PORT, String.valueOf(appDefinition.getSpec().getPort()));
 

@@ -41,7 +41,8 @@ public class IngressPathProviderImpl implements IngressPathProvider {
         return getBasePath() + session.getMetadata().getUid();
     }
 
-    protected String getBasePath() {
+    @Override
+    public String getBasePath() {
         if (arguments.isUsePaths() && arguments.getInstancesPath() != null && !arguments.getInstancesPath().isBlank()) {
             return "/" + arguments.getInstancesPath().trim() + "/";
         } else if (arguments.isUsePaths()) {

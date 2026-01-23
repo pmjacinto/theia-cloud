@@ -609,11 +609,13 @@ public class LazySessionHandler implements SessionHandler {
         final String instancesHost = arguments.getInstancesHost();
         List<String> hostsToAdd = getIngressHosts(appDefinition, instancesHost);
 
-        Map<String, String> replacements = TheiaCloudHTTPRouteUtil.getHTTPRouteReplacements(appDefinition, session, serviceToUse, client.namespace(), hostsToAdd);
+        String path = ingressPathProvider.getPath(appDefinition, session);
+        String basePath = ingressPathProvider.getBasePath();
+
+        Map<String, String> replacements = TheiaCloudHTTPRouteUtil.getHTTPRouteReplacements(appDefinition, session, serviceToUse, client.namespace(), hostsToAdd, path, basePath);
         String httpRouteYaml;
         try {
-            httpRouteYaml = JavaResourceUtil.readResourceAndReplacePlaceholders(AddedHandlerUtil.TEMPLATE_HTTP_ROUTE_YAML, replacements,
-                    correlationId);
+            httpRouteYaml = JavaResourceUtil.readResourceAndReplacePlaceholders(AddedHandlerUtil.TEMPLATE_HTTP_ROUTE_YAML, replacements, correlationId);
         } catch (IOException | URISyntaxException e) {
             LOGGER.error(formatLogMessage(correlationId, "Error while adjusting template for session " + session), e);
             return Optional.empty();
