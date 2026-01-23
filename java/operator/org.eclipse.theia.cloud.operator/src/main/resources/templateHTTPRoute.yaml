@@ -22,7 +22,7 @@ spec:
           urlRewrite:
             path:
               type: ReplacePrefixMatch
-              replacePrefixMatch: placeholder-base-path
+              replacePrefixMatch: /
       backendRefs:
         - name: placeholder-service-name
           port: placeholder-service-port

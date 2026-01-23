@@ -610,9 +610,8 @@ public class LazySessionHandler implements SessionHandler {
         List<String> hostsToAdd = getIngressHosts(appDefinition, instancesHost);
 
         String path = ingressPathProvider.getPath(appDefinition, session);
-        String basePath = ingressPathProvider.getBasePath();
 
-        Map<String, String> replacements = TheiaCloudHTTPRouteUtil.getHTTPRouteReplacements(appDefinition, session, serviceToUse, client.namespace(), hostsToAdd, path, basePath);
+        Map<String, String> replacements = TheiaCloudHTTPRouteUtil.getHTTPRouteReplacements(appDefinition, session, serviceToUse, client.namespace(), hostsToAdd, path);
         String httpRouteYaml;
         try {
             httpRouteYaml = JavaResourceUtil.readResourceAndReplacePlaceholders(AddedHandlerUtil.TEMPLATE_HTTP_ROUTE_YAML, replacements, correlationId);
