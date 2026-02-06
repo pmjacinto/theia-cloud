@@ -153,6 +153,7 @@ public class LazySessionHandler implements SessionHandler {
         }
         AppDefinition appDefinition = optionalAppDefinition.get();
         AppDefinitionSpec appDefinitionSpec = appDefinition.getSpec();
+        boolean usingGatewayAPI = appDefinitionSpec.getGatewayName() != null && !appDefinitionSpec.getGatewayName().isEmpty();
 
         /* label maps */
         Map<String, String> labelsToAdd = LabelsUtil.createSessionLabels(session, appDefinition);
@@ -174,7 +175,7 @@ public class LazySessionHandler implements SessionHandler {
         }
 
         Optional<Ingress> ingress = Optional.empty();
-        if (appDefinitionSpec.getGatewayName() == null || appDefinitionSpec.getGatewayName().isEmpty()) {
+        if (!usingGatewayAPI) {
             ingress = getIngress(appDefinition, correlationId);
             if (ingress.isEmpty()) {
                 client.sessions().updateStatus(correlationId, session, s -> {
@@ -268,7 +269,7 @@ public class LazySessionHandler implements SessionHandler {
 
         /* adjust the ingress or create HTTPRoute */
         String host;
-        if (appDefinitionSpec.getGatewayName() == null || appDefinitionSpec.getGatewayName().isEmpty()) {
+        if (!usingGatewayAPI) {
             try {
                 host = updateIngress(ingress, serviceToUse, session, appDefinition, correlationId);
             } catch (KubernetesClientException e) {
@@ -311,7 +312,7 @@ public class LazySessionHandler implements SessionHandler {
 
         /* Update session resource */
         try {
-            AddedHandlerUtil.updateSessionURLAsync(client.sessions(), session, client.namespace(), host, correlationId);
+            AddedHandlerUtil.updateSessionURLAsync(client.sessions(), session, client.namespace(), host, correlationId, usingGatewayAPI);
         } catch (KubernetesClientException e) {
             LOGGER.error(
                     formatLogMessage(correlationId, "Error while editing session " + session.getMetadata().getName()),

@@ -132,7 +132,7 @@ public final class AddedHandlerUtil {
     }
 
     public static void updateSessionURLAsync(SessionResourceClient sessions, Session session, String namespace,
-            String url, String correlationId) {
+            String url, String correlationId, boolean usingGatewayAPI) {
         EXECUTOR.execute(() -> {
             boolean updateURL = false;
             for (int i = 1; i <= 100; i++) {
@@ -187,6 +187,13 @@ public final class AddedHandlerUtil {
                 if (code == 200) {
                     updateURL = true;
                 } else if (code != 404 && code != 503 && !updateURL) {
+                    // When using the Gateway API an HTTP 500 does not mean something is available
+                    // The gateway API spec forces implementations to return HTTP 500 errors when creating a route with an invalid backendRef
+                    // When creating the HTTPRoute and the Service at the same time, this makes it possible to receive an HTTP 500 temporarily
+                    // if the Gateway API implementation hasn't detected the Service exists yet (this has been observed to happen in practice with kgateway)
+                    if (usingGatewayAPI && code == 500) {
+                        continue;
+                    }
                     /*
                      * we don't get a 404 or 503, so something is available. Try accessing the URL once more then update
                      * URL anyway
