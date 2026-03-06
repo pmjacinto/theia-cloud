@@ -15,8 +15,11 @@
  ********************************************************************************/
 package org.eclipse.theia.cloud.common.util;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.eclipse.theia.cloud.common.k8s.resource.workspace.Workspace;
+import org.eclipse.theia.cloud.common.k8s.resource.workspace.WorkspaceSpec;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -48,5 +51,15 @@ class WorkspaceUtilTests {
     void getSessionName_appendsSessionSuffix() {
         String sessionName = WorkspaceUtil.getSessionName("my-workspace");
         assertTrue(sessionName.endsWith("-session"));
+    }
+
+    @Test
+    void getStorageName_existingStorage() {
+        Workspace workspace = new Workspace();
+        workspace.setSpec(new WorkspaceSpec());
+        workspace.getSpec().setStorage("my-storage");
+
+        String storageName = WorkspaceUtil.getStorageName(workspace);
+        assertEquals("my-storage", storageName);
     }
 }
